@@ -4,6 +4,7 @@ import json
 from datetime import datetime
 import requests
 from site_voos_gerais import generate_url, fetch_price_from_url
+from time import sleep
 
 def load_data():
     try:
@@ -77,29 +78,34 @@ def main():
             if destino_filter:
                 df = df[df['Destino'].str.contains(destino_filter, case=False)]
 
-            # Display table with action buttons
+            # Display all rows directly
             for index, row in df.iterrows():
-                with st.expander(f"{row['Cliente']} - {row['Origem']} → {row['Destino']}"):
-                    col1, col2, col3, col4 = st.columns([3,2,2,1])
-                    with col1:
-                        st.write(f"**Preço Atual:** R$ {row['Preco']}")
-                        st.write(f"**Preço Desejado:** R$ {row['Preco_Desejado']}")
-                    with col2:
-                        st.write(f"**Data Ida:** {row['Data_Ida']}")
-                        st.write(f"**Data Volta:** {row['Data_Volta']}")
-                    with col3:
-                        if st.button("Atualizar Preço", key=f"update_{index}"):
+                st.container()
+                col1, col2, col3, col4 = st.columns([3,2,2,1])
+                with col1:
+                    st.write(f"**Cliente:** {row['Cliente']}")
+                    st.write(f"**Origem → Destino:** {row['Origem']} → {row['Destino']}")
+                    st.write(f"**Preço Atual:** R$ {row['Preco']}")
+                    st.write(f"**Preço Desejado:** R$ {row['Preco_Desejado']}")
+                with col2:
+                    st.write(f"**Telefone:** {row['Telefone']}")
+                    st.write(f"**Data Ida:** {row['Data_Ida']}")
+                    st.write(f"**Data Volta:** {row['Data_Volta']}")
+                with col3:
+                    if st.button("Atualizar Preço", key=f"update_{index}"):
                             new_price = fetch_price_from_url(row['URL_cliente'])
                             data[index]['Preco'] = new_price
                             save_data(data)
                             st.success(f"Preço atualizado: R$ {new_price}")
-                    with col4:
-                        if st.button("Remover", key=f"remove_{index}"):
-                            data.pop(index)
-                            save_data(data)
-                            st.success("Voo removido com sucesso!")
+                            sleep(5)
                             st.rerun()
-
+                with col4:
+                    if st.button("Remover", key=f"remove_{index}"):
+                        data.pop(index)
+                        save_data(data)
+                        st.success("Voo removido com sucesso!")
+                        st.rerun()
+                st.divider()
     with tab2:
         st.header("Upload de Excel")
         uploaded_file = st.file_uploader("Escolha um arquivo Excel", type=['xlsx'])

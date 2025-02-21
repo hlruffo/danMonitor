@@ -1282,5 +1282,17 @@
         "Preco_Desejado": null,
         "URL_cliente": "https://www.comprarviagem.com.br/bizutrips/flight-list?departureDate=2025-06-05T00:00:00.000Z&isRoundTrip=false&adultsCount=1&infantCount=0&childCount=0&departureIata=SSA&arrivalIata=CGB&isPackage=false&departureName=SSA%20Todos%20os%20aeroportos&arrivalName=CGB%20Todos%20os%20aeroportos&departureCity=SSA&arrivalCity=CGB&departureCountry=false&isDepartureIataCity=true&isArrivalIataCity=true&source=f",
         "Link_Whatsapp": ""
+    },
+    {
+        "Cliente": "Hugo",
+        "Telefone": "21982222126",
+        "Origem": "GIG",
+        "Data_Ida": "2025-02-27",
+        "Destino": "SSA",
+        "Data_Volta": "2025-03-21",
+        "Preco": 3028.03,
+        "Preco_Desejado": 0.0,
+        "URL_cliente": "https://www.comprarviagem.com.br/bizutrips/flight-list?departureDate=2025-02-27T00:00:00.000Z&returnDate=2025-03-21T00:00:00.000Z&isRoundTrip=true&adultsCount=1&infantCount=0&childCount=0&departureIata=GIG&arrivalIata=SSA&isPackage=false&departureName=GIG%20Todos%20os%20aeroportos&arrivalName=SSA%20Todos%20os%20aeroportos&departureCity=GIG&arrivalCity=SSA&departureCountry=false&isDepartureIataCity=true&isArrivalIataCity=true&source=f",
+        "Link_Whatsapp": ""
     }
 ]
