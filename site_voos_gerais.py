@@ -79,12 +79,10 @@ def fetch_price_from_url(url):
     try:
         driver = webdriver.Chrome(service=service, options=chrome_options)
         driver.get(url)
-        WebDriverWait(driver, 30).until(
+        WebDriverWait(driver, 300000).until(
             EC.presence_of_element_located((By.CLASS_NAME, "progress-bar-value"))
         )
-        WebDriverWait(driver, 30).until(
-            EC.invisibility_of_element((By.CLASS_NAME, "progress-bar-value"))
-        )
+        
         price_element = WebDriverWait(driver, 20).until(
             EC.presence_of_element_located((By.CSS_SELECTOR, "span.price.app-black.font-weight-bold"))
         )
