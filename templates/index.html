@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tabela de Voos</title>
+    <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
+    <style>
+        #progress-container {
+            margin: 20px 0;
+            display: none;
+        }
+        #progress-bar {
+            width: 0;
+            height: 25px;
+            background-color: #4caf50;
+            text-align: center;
+            line-height: 25px;
+            color: white;
+        }
+        #progress-text {
+            margin-top: 5px;
+            text-align: center;
+        }
+        button[disabled] {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        #refresh-button {
+            margin: 10px auto;
+            display: none;
+            background-color: #4caf50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            cursor: pointer;
+        }
+        #refresh-button:hover {
+            background-color: #45a049;
+        }
+    </style>
+</head>
+<body>
+    <h1>Tabela de Voos</h1>
+    <!-- Formulário para adicionar uma nova entrada -->
+    <form method="POST" action="/add">
+        <input type="text" name="cliente" placeholder="Cliente" required>
+        <input type="text" name="telefone" placeholder="Telefone" required>
+        <input type="text" name="origem" placeholder="Origem" required>
+        <input type="date" name="data_ida" placeholder="Data Ida" required>
+        <input type="text" name="destino" placeholder="Destino" required>
+        <input type="date" name="data_volta" placeholder="Data Volta">
+        <input type="number" name="preco_desejado" placeholder="Preço Desejado">
+        <button type="submit">Adicionar</button>
+    </form>
+
+    <h2>Upload de Excel</h2>
+    <form action="/upload" method="POST" enctype="multipart/form-data">
+        <input type="file" name="file" accept=".xlsx" required>
+        <button type="submit">Enviar Excel</button>
+    </form>
+
+
+    <div id="progress-container">
+        <div id="progress-bar">0%</div>
+        <div id="progress-text">Linha 0 de 0</div>
+    </div>
+
+    <button id="refresh-button">Atualizar</button>
+
+    <h2>Filtrar Tabela</h2>
+<form id="filter-form">
+    <input type="text" id="filter-cliente" placeholder="Filtrar por Cliente">
+    <input type="text" id="filter-origem" placeholder="Filtrar por Origem">
+    <input type="text" id="filter-destino" placeholder="Filtrar por Destino">
+    <input type="number" id="filter-preco-min" placeholder="Preço Mínimo">
+    <input type="number" id="filter-preco-max" placeholder="Preço Máximo">
+    <button type="button" id="apply-filter">Aplicar Filtros</button>
+</form>
+
+    <!-- Tabela de dados -->
+    <table border="1" style="width: 100%; margin-top: 20px;">
+        <thead>
+            <tr>
+                <th>Cliente</th>
+                <th>Telefone</th>
+                <th>Origem</th>
+                <th>Data Ida</th>
+                <th>Destino</th>
+                <th>Data Volta</th>
+                <th>Preço</th>
+                <th>Preço Desejado</th>
+                <th>
+                    URL Cliente
+                    <form method="POST" action="/update_prices" id="update-prices-form" style="display: inline;">
+                        <button type="button" id="start-update">Rodar</button>
+                    </form>
+                </th>
+                <th>Link Whatsapp</th>
+                <th>Ações</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in data %}
+            <tr>
+                <td>{{ row.Cliente }}</td>
+                <td>{{ row.Telefone }}</td>
+                <td>{{ row.Origem }}</td>
+                <td>{{ row.Data_Ida }}</td>
+                <td>{{ row.Destino }}</td>
+                <td>{{ row.Data_Volta }}</td>
+                <td class="price-column" 
+                    {% if row.Preco and row.Preco_Desejado and row.Preco|float <= row.Preco_Desejado|float %}
+                    style="background-color: lightgreen;"
+                    {% endif %}>
+                    {{ row.Preco }}
+                </td>
+                <td>{{ row.Preco_Desejado }}</td>
+                <td><a href="{{ row.URL_cliente }}" target="_blank">Abrir</a></td>
+                <td><a href="{{ row.Link_Whatsapp }}" target="_blank">Whatsapp</a></td>
+                <td>
+                    <!-- Botão para remover a entrada -->
+                    <form method="POST" action="/delete/{{ loop.index0 }}" style="display: inline;">
+                        <button type="submit">Remover</button>
+                    </form>
+                    <!-- Botão para atualizar apenas uma linha -->
+                    <button class="update-price-button" data-index="{{ loop.index0 }}">Atualizar</button>
+                </td>
+                
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <script>
+        const socket = io();
+
+        // Atualizar a barra de progresso
+        socket.on('update_price', (data) => {
+            const progressBar = document.getElementById('progress-bar');
+            const progressText = document.getElementById('progress-text');
+            const progressPercent = Math.round((data.progress / data.total) * 100);
+
+            progressBar.style.width = `${progressPercent}%`;
+            progressBar.textContent = `${progressPercent}%`;
+            progressText.textContent = `Linha ${data.progress} de ${data.total}`;
+        });
+
+        // Quando o processamento for concluído
+        socket.on('processing_done', (data) => {
+            const progressBar = document.getElementById('progress-bar');
+            const progressText = document.getElementById('progress-text');
+            const refreshButton = document.getElementById('refresh-button');
+
+            progressBar.style.width = '100%';
+            progressBar.textContent = '100%';
+            progressBar.style.backgroundColor = '#4caf50';
+            progressText.textContent = `${data.message}`;
+
+            refreshButton.style.display = 'block';
+        });
+
+        // Configurar o botão "Rodar"
+        document.getElementById('start-update').addEventListener('click', () => {
+            const startUpdateButton = document.getElementById('start-update');
+            const refreshButton = document.getElementById('refresh-button');
+            startUpdateButton.disabled = true;
+            refreshButton.style.display = 'none';
+
+            const progressBar = document.getElementById('progress-bar');
+            const progressText = document.getElementById('progress-text');
+            progressBar.style.width = '0%';
+            progressBar.textContent = '0%';
+            progressText.textContent = 'Linha 0 de 0';
+
+            document.getElementById('progress-container').style.display = 'block';
+
+            fetch('/update_prices', { method: 'POST' });
+        });
+
+        // Atualizar os preços na tabela ao clicar em "Atualizar"
+        document.getElementById('refresh-button').addEventListener('click', () => {
+            location.reload();
+        });
+        document.querySelectorAll('.update-price-button').forEach(button => {
+            button.addEventListener('click', () => {
+                const index = button.getAttribute('data-index');
+                button.disabled = true;
+                button.textContent = 'Atualizando...';
+
+                fetch(`/update_price/${index}`, { method: 'POST' })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            alert(`Preço atualizado: ${data.Preco}`);
+                            location.reload();
+                        } else {
+                            alert(`Erro: ${data.error}`);
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Erro ao atualizar preço:', error);
+                        alert('Erro ao atualizar o preço. Tente novamente.');
+                    })
+                    .finally(() => {
+                        button.disabled = false;
+                        button.textContent = 'Atualizar Preço';
+                    });
+            });
+        });
+        document.getElementById('apply-filter').addEventListener('click', () => {
+        const cliente = document.getElementById('filter-cliente').value.toLowerCase();
+        const origem = document.getElementById('filter-origem').value.toLowerCase();
+        const destino = document.getElementById('filter-destino').value.toLowerCase();
+        const precoMin = parseFloat(document.getElementById('filter-preco-min').value);
+        const precoMax = parseFloat(document.getElementById('filter-preco-max').value);
+
+        const rows = document.querySelectorAll('table tbody tr');
+
+        rows.forEach(row => {
+        const clienteText = row.children[0].textContent.toLowerCase();
+        const origemText = row.children[2].textContent.toLowerCase();
+        const destinoText = row.children[4].textContent.toLowerCase();
+        const preco = parseFloat(row.children[6].textContent);
+
+        let show = true;
+
+        if (cliente && !clienteText.includes(cliente)) show = false;
+        if (origem && !origemText.includes(origem)) show = false;
+        if (destino && !destinoText.includes(destino)) show = false;
+        if (!isNaN(precoMin) && preco < precoMin) show = false;
+        if (!isNaN(precoMax) && preco > precoMax) show = false;
+
+        row.style.display = show ? '' : 'none';
+         });
+    });
+
+
+    </script>
+</body>
+</html>
